@@ -4,7 +4,7 @@
 Add a dependency-free CLI that validates Markdown task contracts before a coding agent starts work.
 
 ## Acceptance Criteria
-- `python -m agent_task_contract check examples/AGENT_TASK.md` exits with status 0.
+- `PYTHONPATH=src python3 -m agent_task_contract check examples/AGENT_TASK.md` exits with status 0.
 - Incomplete contracts return a non-zero exit code with actionable messages.
 - JSON output includes `path`, `status`, `score`, and `issues`.
 
@@ -22,9 +22,10 @@ The project is for builders using Codex, Claude Code, or similar coding agents i
 - README usage examples and a sample task contract.
 
 ## Verification
-- `python -m unittest`
-- `PYTHONPATH=src python -m agent_task_contract check examples/AGENT_TASK.md`
-- `PYTHONPATH=src python -m agent_task_contract check examples/AGENT_TASK.md --format json`
+- `make test`
+- `make lint`
+- `PYTHONPATH=src python3 -m agent_task_contract check examples/AGENT_TASK.md`
+- `PYTHONPATH=src python3 -m agent_task_contract check examples/AGENT_TASK.md --format json`
 
 ## Risks
 - The checker could reward headings without useful content.
@@ -34,4 +35,3 @@ The project is for builders using Codex, Claude Code, or similar coding agents i
 - Do not build a prompt-generation system.
 - Do not inspect private repo content beyond the contract file supplied by the user.
 - Do not claim that a passing contract guarantees good agent output.
-

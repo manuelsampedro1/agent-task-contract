@@ -21,14 +21,14 @@ The tool is intentionally local-first and dependency-free. It reads Markdown, re
 Run from a local checkout:
 
 ```sh
-python -m pip install --upgrade pip
-python -m pip install -e .
+python3 -m pip install --upgrade pip
+python3 -m pip install -e .
 ```
 
 Or run without installing:
 
 ```sh
-python -m agent_task_contract check AGENT_TASK.md
+PYTHONPATH=src python3 -m agent_task_contract check AGENT_TASK.md
 ```
 
 ## Usage
@@ -123,6 +123,9 @@ This project complements:
 ## Development
 
 ```sh
-python -m unittest discover -s tests
-python -m agent_task_contract check examples/AGENT_TASK.md
+make test
+make lint
+make build
+PYTHONPATH=src python3 -m agent_task_contract check examples/AGENT_TASK.md
+PYTHONPATH=src python3 -m agent_task_contract check examples/AGENT_TASK.md --format json
 ```

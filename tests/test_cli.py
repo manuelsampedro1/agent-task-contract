@@ -1,9 +1,12 @@
 import json
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from agent_task_contract.cli import TEMPLATE, check_contract, main, parse_sections
 
@@ -29,8 +32,9 @@ The repo is a small local-first developer tool for coding-agent workflows.
 - Add unit tests under `tests/`.
 
 ## Verification
-- `python -m unittest`
-- `python -m agent_task_contract check examples/AGENT_TASK.md`
+- `make test`
+- `make lint`
+- `PYTHONPATH=src python3 -m agent_task_contract check examples/AGENT_TASK.md`
 
 ## Risks
 - The validator could become too vague if it only checks headings.

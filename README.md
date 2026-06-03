@@ -7,7 +7,7 @@ Most agent failures start before the first edit: vague objective, missing accept
 ## What It Checks
 
 - A clear objective.
-- Acceptance criteria with concrete bullets.
+- Acceptance criteria with concrete bullets and optional stable IDs.
 - Context that explains why the work matters.
 - Constraints that limit unsafe or distracting changes.
 - Expected change areas.
@@ -51,12 +51,23 @@ JSON output for automation:
 agent-task-contract check AGENT_TASK.md --format json
 ```
 
+Strict acceptance traceability:
+
+```sh
+agent-task-contract check AGENT_TASK.md --require-acceptance-ids
+```
+
+Use this when the contract will feed acceptance traces, proof packets, PR
+briefs, closeouts, or profile proof. Every acceptance-criteria bullet must
+start with a stable ID such as `AC-1`, and duplicate IDs fail the contract.
+
 ## Example
 
 ```text
 Agent Task Contract: AGENT_TASK.md
 Status: pass
 Score: 100/100
+Acceptance ids: 3/3
 
 No blocking issues found.
 ```
@@ -85,8 +96,8 @@ Use these headings:
 State the single outcome the agent should produce.
 
 ## Acceptance Criteria
-- The observable conditions that prove the task is done.
-- Include at least two concrete checks.
+- AC-1: The observable condition that proves the main task is done.
+- AC-2: Include at least one verification check tied to the change.
 
 ## Context
 Explain the repo, product, user, or workflow context the agent needs.

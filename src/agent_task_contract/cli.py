@@ -36,8 +36,8 @@ TEMPLATE = """# Agent Task Contract
 State the single outcome the agent should produce.
 
 ## Acceptance Criteria
-- The observable conditions that prove the task is done.
-- Include at least two concrete checks.
+- AC-1: The observable conditions that prove the task is done.
+- AC-2: Include at least two concrete checks.
 
 ## Context
 Explain the repo, product, user, or workflow context the agent needs.
@@ -72,6 +72,10 @@ class CheckResult:
     path: str
     status: str
     score: int
+    acceptance_criteria_count: int
+    acceptance_id_count: int
+    acceptance_ids: list[str]
+    acceptance_ids_required: bool
     issues: list[Issue]
 
 
@@ -100,6 +104,26 @@ def bullet_count(text: str) -> int:
     return sum(1 for line in text.splitlines() if re.match(r"^\s*[-*]\s+\S+", line))
 
 
+def bullet_lines(text: str) -> list[str]:
+    return [line.strip() for line in text.splitlines() if re.match(r"^\s*[-*]\s+\S+", line)]
+
+
+def acceptance_id_from_bullet(line: str) -> str | None:
+    match = re.match(r"^\s*[-*]\s+(?:\[(AC-\d+)\]|(AC-\d+)\b)\s*[:.)-]?", line, re.IGNORECASE)
+    if not match:
+        return None
+    return (match.group(1) or match.group(2)).upper()
+
+
+def acceptance_ids(text: str) -> list[str]:
+    ids: list[str] = []
+    for line in bullet_lines(text):
+        found = acceptance_id_from_bullet(line)
+        if found:
+            ids.append(found)
+    return ids
+
+
 def has_verification_signal(text: str) -> bool:
     if "`" in text:
         return True
@@ -114,7 +138,7 @@ def score_from_issues(issues: Iterable[Issue]) -> int:
     return max(score, 0)
 
 
-def check_contract(path: Path) -> CheckResult:
+def check_contract(path: Path, *, require_acceptance_ids: bool = False) -> CheckResult:
     markdown = path.read_text(encoding="utf-8")
     sections = parse_sections(markdown)
     issues: list[Issue] = []
@@ -130,8 +154,16 @@ def check_contract(path: Path) -> CheckResult:
             issues.append(Issue("error", f"{section} still looks like placeholder text."))
 
     acceptance = sections.get("Acceptance Criteria", "")
+    acceptance_lines = bullet_lines(acceptance)
+    found_acceptance_ids = acceptance_ids(acceptance)
     if acceptance and bullet_count(acceptance) < 2:
         issues.append(Issue("error", "Acceptance Criteria should include at least two concrete bullets."))
+    if require_acceptance_ids and acceptance:
+        if len(found_acceptance_ids) < len(acceptance_lines):
+            issues.append(Issue("error", "Acceptance Criteria should give every bullet a stable id like AC-1."))
+        duplicate_ids = sorted({criterion_id for criterion_id in found_acceptance_ids if found_acceptance_ids.count(criterion_id) > 1})
+        if duplicate_ids:
+            issues.append(Issue("error", f"Acceptance Criteria ids must be unique: {', '.join(duplicate_ids)}."))
 
     constraints = sections.get("Constraints", "")
     if constraints and bullet_count(constraints) < 1:
@@ -155,7 +187,16 @@ def check_contract(path: Path) -> CheckResult:
 
     score = score_from_issues(issues)
     status = "fail" if any(issue.severity == "error" for issue in issues) or score < 80 else "pass"
-    return CheckResult(str(path), status, score, issues)
+    return CheckResult(
+        str(path),
+        status,
+        score,
+        len(acceptance_lines),
+        len(found_acceptance_ids),
+        found_acceptance_ids,
+        require_acceptance_ids,
+        issues,
+    )
 
 
 def render_text(result: CheckResult) -> str:
@@ -163,6 +204,7 @@ def render_text(result: CheckResult) -> str:
         f"Agent Task Contract: {result.path}",
         f"Status: {result.status}",
         f"Score: {result.score}/100",
+        f"Acceptance ids: {result.acceptance_id_count}/{result.acceptance_criteria_count}",
         "",
     ]
 
@@ -206,6 +248,11 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("path", nargs="?", default="AGENT_TASK.md")
     check_parser.add_argument("--format", choices=["text", "json"], default="text")
     check_parser.add_argument("--strict", action="store_true", help="Return non-zero when warnings are present.")
+    check_parser.add_argument(
+        "--require-acceptance-ids",
+        action="store_true",
+        help="Require every acceptance-criteria bullet to start with a stable id like AC-1.",
+    )
 
     return parser
 
@@ -222,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{path} does not exist.")
         return 2
 
-    result = check_contract(path)
+    result = check_contract(path, require_acceptance_ids=args.require_acceptance_ids)
     if args.format == "json":
         print(json.dumps(asdict(result), indent=2))
     else:
@@ -233,4 +280,3 @@ def main(argv: list[str] | None = None) -> int:
     if args.strict and result.issues:
         return 1
     return 0
-
